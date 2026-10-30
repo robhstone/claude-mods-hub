@@ -1,0 +1,14 @@
+{
+  "name": "claude-mods-hub",
+  "owner": {
+    "name": "Rob Stone"
+  },
+  "plugins": [
+    {
+      "name": "mods-hub",
+      "source": "./",
+      "description": "A home base above the prompt for all your mods, with Cache and Progress built in."
+    }
+  ],
+  "description": "Rob Stone's mods hub for Claude Code, and the mods it hosts."
+}

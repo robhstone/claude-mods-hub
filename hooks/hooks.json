@@ -1,0 +1,6 @@
+{
+  "description": "mods-hub (Mod): one band above the prompt with a tab per favorite mod, a ⋯ menu and a settings view.",
+  "modules": [
+    "./register.tsx"
+  ]
+}
