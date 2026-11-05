@@ -631,6 +631,8 @@ async function openPane($: EngineInterface) {
   if (opened.isPlaced) {
     paneOpen = true
     scheduleRefresh($, s)
+    // /cache-tax opens it too: the hub's button should say so.
+    $.ui.invalidate('ui.render')
   }
   return opened
 }
@@ -969,7 +971,7 @@ export const cacheTax: Mod = {
   id: ID,
   name: NAME,
   icon: '◷',
-  hasPane: true,
+  pane: { id: PANE },
   description: 'Keeps the one-hour prompt cache warm during breaks and stops a cold send once with its price.',
 }
 
@@ -1072,6 +1074,11 @@ export async function cacheTaxView($: EngineInterface, e: BandInput): Promise<Mo
     actions: [keepWarm],
     rows,
   }
+}
+
+export async function cacheTaxClosePane($: EngineInterface): Promise<void> {
+  paneOpen = false
+  await $.ui.close({ id: PANE })
 }
 
 export async function cacheTaxOpenPane($: EngineInterface): Promise<void> {

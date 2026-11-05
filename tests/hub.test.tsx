@@ -75,7 +75,7 @@ test('settings turn a mod fully off, and back on, across sessions', async ($, on
   await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   await ui.press({ key: 'hub-settings' })
-  expect(await drawn(ui)).toMatch(/2 of 4 favorites/)
+  expect(await drawn(ui)).toMatch(/3 of 4 favorites/)
   await ui.press({ key: 'hub-on-cache-tax' })
   expect(toasts.at(-1)).toMatch(/Cache is off/)
 
@@ -126,7 +126,7 @@ test('unstarring drops a tab; ⋯ opens any mod as a tab of its own until anothe
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   await ui.press({ key: 'hub-settings' })
   await ui.press({ key: 'hub-fav-crew' })
-  expect(await drawn(ui)).toMatch(/1 of 4 favorites/)
+  expect(await drawn(ui)).toMatch(/2 of 4 favorites/)
   await ui.press({ key: 'hub-done' })
   expect(await ui.find({ key: 'hub-tab-crew' })).toBeFalsy()
 
@@ -139,6 +139,42 @@ test('unstarring drops a tab; ⋯ opens any mod as a tab of its own until anothe
 
   await ui.press({ key: 'hub-tab-cache-tax' })
   expect(await ui.find({ key: 'hub-tab-crew' })).toBeFalsy()
+  await ui.unmount()
+})
+
+for (const surface of ['terminal', 'desktop'] as const) {
+  test(`every mod's panel button opens and closes its own panel, on ${surface}`, async ($, on) => {
+    engine(on)
+    await $.session.start({ cwd: '/', surface, isInteractive: true })
+    const ui = await $.ui.mount({ ...BAND, surface })
+    const label = async () => (await ui.find({ key: 'hub-open' }))?.props?.label
+    for (const [tab, opening] of [['cache-tax', 'Open Panel'], ['crew', 'Open Panel'], ['skills', 'All Skills']] as const) {
+      await ui.press({ key: `hub-tab-${tab}` })
+      expect(await label()).toBe(opening)
+      await ui.press({ key: 'hub-open' })
+      expect(await label()).toBe('Close Panel')
+      await ui.press({ key: 'hub-open' })
+      expect(await label()).toBe(opening)
+    }
+
+    // One mod's panel being open says nothing about another's.
+    await ui.press({ key: 'hub-tab-crew' })
+    await ui.press({ key: 'hub-open' })
+    await ui.press({ key: 'hub-tab-cache-tax' })
+    expect(await label()).toBe('Open Panel')
+    await ui.press({ key: 'hub-tab-crew' })
+    expect(await label()).toBe('Close Panel')
+    await ui.unmount()
+  })
+}
+
+test('/cache-tax opens the panel, and the button says so', async ($, on) => {
+  engine(on)
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect((await ui.find({ key: 'hub-open' }))?.props?.label).toBe('Open Panel')
+  await $.command.run({ command: 'cache-tax' } as never)
+  expect((await ui.find({ key: 'hub-open' }))?.props?.label).toBe('Close Panel')
   await ui.unmount()
 })
 

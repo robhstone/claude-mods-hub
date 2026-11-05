@@ -696,7 +696,7 @@ export const crew: Mod = {
   id: ID,
   name: 'Progress',
   icon: '▤',
-  hasPane: true,
+  pane: { id: PANE },
   description: "Claude's plan and what each sub-agent is doing, why, and how far along it is.",
 }
 

@@ -28,6 +28,7 @@ function engine(on: On, toasts: string[] = [], placed = true) {
   on('command.list', () => ({ value: [] }))
   on('ui.open', () => ({ value: placed ? { isPlaced: true } : { isPlaced: false, reason: 'the attached surfaces (mobile) place no panes' } }) as never)
   on('ui.close', () => ({ value: undefined }) as never)
+  on('ui.panes', () => ({ value: [] }) as never)
   // The engine's own row above the prompt, beneath the band.
   on('ui.render', ($, e) => {
     const { Text } = $.ui.resolve(e)

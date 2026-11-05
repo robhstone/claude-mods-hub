@@ -4,12 +4,13 @@ import type { ArgOf, BandInput, Badge, Mod, ModView, NextOf } from '../hub'
 import {
   cacheTax, cacheTaxBadge, cacheTaxClassicSessionStart, cacheTaxDisable, cacheTaxEnable, cacheTaxOpenPane, cacheTaxPromptSubmit,
   cacheTaxSessionAttach, cacheTaxSessionCompact, cacheTaxSessionEnd, cacheTaxSessionStart, cacheTaxTurnComplete, cacheTaxTurnStep,
-  cacheTaxUiClose, cacheTaxView, registerCacheTax,
+  cacheTaxClosePane, cacheTaxUiClose, cacheTaxView, registerCacheTax,
 } from './cache-tax'
 import {
   crew, crewAgentSpawn, crewBadge, crewDisable, crewOpenPane, crewPromptCompose, crewPromptSubmit, crewSessionAppend,
   crewSessionMeasure, crewTurnComplete, crewTurnStep, crewView, registerCrew,
 } from './crew'
+import { registerSkills, skills, skillsOpenPane, skillsSessionStart, skillsView } from './skills'
 
 // Adding a mod: write hooks/mods/<name>.tsx, then wire it in here: its entry in
 // MODS, its register in registerMods, a case in each dispatcher it has, and
@@ -18,12 +19,13 @@ import {
 type $ = EngineInterface
 
 /** Every mod the hub hosts, in the order the ⋯ menu and the settings list them. */
-export const MODS: Mod[] = [cacheTax, crew]
+export const MODS: Mod[] = [cacheTax, crew, skills]
 
 /** Adds each mod's hooks that have a matcher of their own: its commands, its pane. */
 export function registerMods(on: On) {
   registerCacheTax(on)
   registerCrew(on)
+  registerSkills(on)
 }
 
 // ---------- what the hub asks of a mod, by id ----------
@@ -31,6 +33,7 @@ export function registerMods(on: On) {
 export async function viewOf($: $, id: string, e: BandInput): Promise<ModView | null> {
   if (id === 'cache-tax') return cacheTaxView($, e)
   if (id === 'crew') return crewView($, e)
+  if (id === 'skills') return skillsView($, e)
   return null
 }
 
@@ -43,6 +46,13 @@ export async function badgeOf($: $, id: string, e: BandInput): Promise<Badge | n
 export async function openPaneOf($: $, id: string) {
   if (id === 'cache-tax') return cacheTaxOpenPane($)
   if (id === 'crew') return crewOpenPane($)
+  if (id === 'skills') return skillsOpenPane($)
+}
+
+export async function closePaneOf($: $, id: string) {
+  if (id === 'cache-tax') return cacheTaxClosePane($)
+  const pane = MODS.find(mod => mod.id === id)?.pane
+  if (pane) await $.ui.close({ id: pane.id })
 }
 
 /** Runs when the person turns a mod on or off: timers armed or cancelled, status lines set or cleared. */
@@ -64,7 +74,7 @@ function once<A, R>(f: (a: A) => R): (a: A) => R {
 }
 
 export async function onSessionStart($: $, e: ArgOf<'session.start'>, next: NextOf<'session.start'>) {
-  return cacheTaxSessionStart($, e, next)
+  return cacheTaxSessionStart($, e, e2 => skillsSessionStart($, e2, next))
 }
 
 export async function onSessionAttach($: $, e: ArgOf<'session.attach'>, next: NextOf<'session.attach'>) {

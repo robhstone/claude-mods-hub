@@ -21,8 +21,8 @@ type Plain<R> = R extends HookStream<infer C, infer T> ? AsyncGenerator<C, T> : 
 /**
  * What a mod draws in the hub: a headline (its state at a glance, kept when the
  * hub is collapsed), up to two action Buttons beside it, and its rows under
- * both, of which the hub shows 5 and scrolls the rest. The hub adds Open Panel
- * before the actions of a mod with a pane.
+ * both, of which the hub shows 5 and scrolls the rest. The hub adds a button that
+ * opens and closes the pane before the actions of a mod with one.
  */
 export type ModView = { headline: Row; actions?: Row[]; rows: Row[] }
 
@@ -58,8 +58,11 @@ export type Mod = {
   icon: string
   /** One line for the settings view. */
   description: string
-  /** Whether it has a side pane, opened from the hub's ⤢ Open panel. */
-  hasPane: boolean
+  /**
+   * Its side pane, if it has one: the id it opens under, and what the hub's button says while it's
+   * closed (Open Panel unless given). While it's open the button says Close Panel and closes it.
+   */
+  pane?: { id: string; label?: string }
 }
 
 /** What a mod that's off answers for its own slash commands. */
@@ -70,6 +73,15 @@ let look = { light: false, noColor: false }
 
 export function setLook(next: Partial<typeof look>) {
   look = { ...look, ...next }
+}
+
+/** A color for each slot of a list, repeating after five; undefined under NO_COLOR. Picked to read on the band in either theme. */
+export function slotColor(slot: number): string | undefined {
+  if (look.noColor) return undefined
+  const colors = look.light
+    ? ['#C2410C', '#A16207', '#15803D', '#1D4ED8', '#7E22CE']
+    : ['#FF8A65', '#F5C04E', '#6FCF97', '#6CB6FF', '#B794F6']
+  return colors[slot % colors.length]
 }
 
 /**

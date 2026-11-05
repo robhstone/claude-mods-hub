@@ -5,7 +5,7 @@ import type { HubView } from '../types'
 import { hubColors, isModOn, setLook, setSwitches, type BandInput, type Badge, type Mod, type ModView } from './hub'
 import {
   MODS, badgeOf, onAgentSpawn, onClassicSessionStart, onPromptCompose, onPromptSubmit, onSessionAppend, onSessionAttach,
-  onSessionCompact, onSessionEnd, onSessionMeasure, onSessionStart, onTurnComplete, onTurnStep, onUiClose, openPaneOf,
+  onSessionCompact, onSessionEnd, onSessionMeasure, onSessionStart, onTurnComplete, onTurnStep, onUiClose, closePaneOf, openPaneOf,
   registerMods, switchedOf, viewOf,
 } from './mods'
 
@@ -133,6 +133,18 @@ async function toggleFavorite($: $, id: string) {
   await $.store.set(KEY_FAVORITES, next)
 }
 
+/** Whether a mod's pane is up, by the engine's own record, so a reload or the pane's own close mark can't leave it stale. */
+async function isPaneUp($: $, mod: Mod): Promise<boolean> {
+  return (await $.ui.panes()).some(pane => pane.id === mod.pane?.id && pane.isPlaced)
+}
+
+/** The hub's panel button: opens the mod's pane, or closes it while it's up. */
+async function togglePane($: $, mod: Mod) {
+  if (await isPaneUp($, mod)) await closePaneOf($, mod.id)
+  else await openPaneOf($, mod.id)
+  $.ui.invalidate('ui.render')
+}
+
 /** Each enabled mod's mark, for the tabs and the ⋯ list. A mod that fails to make one still gets its tab. */
 async function badgesOf($: $, e: BandInput): Promise<Map<string, Badge>> {
   const badges = new Map<string, Badge>()
@@ -170,7 +182,12 @@ export const register: Register = on => {
   on('prompt.submit', ($, e, next) => onPromptSubmit($, e, next)).catch(($, e, next) => next(e))
   on('agent.spawn', ($, e, next) => onAgentSpawn($, e, next)).catch(($, e, next) => next(e))
   on('turn.complete', ($, e, next) => onTurnComplete($, e, next))
-  on('ui.close', ($, e, next) => onUiClose($, e, next))
+  // However a pane closes, the panel button goes back to its opening words.
+  on('ui.close', async ($, e, next) => {
+    const closed = await onUiClose($, e, next)
+    $.ui.invalidate('ui.render')
+    return closed
+  })
   on('turn.step', async function* ($, e, next) {
     return yield* onTurnStep($, e, next)
   })
@@ -311,10 +328,11 @@ export const register: Register = on => {
         drawn = { headline: muted(`${current.name} couldn't draw: ${err instanceof Error ? err.message : String(err)}`), rows: [] }
       }
       shownView = drawn ?? { headline: <Text color={C.text}>{`${current.icon} ${current.name}`}</Text>, rows: [] }
-      // Mods with a side pane open it from here, before their own actions.
-      if (current.hasPane) {
-        const open = <Button key="hub-open" label="Open Panel" hotkey={isDesktop ? undefined : 'p'} variant="secondary" onPress={() => void openPaneOf($, current.id)} />
-        shownView = { ...shownView, actions: [open, ...(shownView.actions ?? [])] }
+      // Mods with a side pane open and close it from here, before their own actions.
+      if (current.pane) {
+        const label = (await isPaneUp($, current)) ? 'Close Panel' : (current.pane.label ?? 'Open Panel')
+        const panel = <Button key="hub-open" label={label} hotkey={isDesktop ? undefined : 'p'} variant="secondary" onPress={() => void togglePane($, current)} />
+        shownView = { ...shownView, actions: [panel, ...(shownView.actions ?? [])] }
       }
     }
 

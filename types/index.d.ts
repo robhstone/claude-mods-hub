@@ -74,6 +74,16 @@ declare module 'claude-code' {
       crewPlan: Shaped<PlanItem[]>
       crewUsage: Usage
       crewNow: number
+      // Skills
+      skillsFavorites: string[]
+      skillsMembers: string[]
+      // The favorite whose card the band shows.
+      skillsFocus: string
+      // The card open in the panel, and the author filter ('all' or an author's id).
+      skillsPick: string
+      skillsAuthor: string
+      // Install Recommended Skills: where it's got to, and what to say about it.
+      skillsInstall: { phase: 'idle' | 'running' | 'done' | 'failed'; note: string }
     }
   }
 }
