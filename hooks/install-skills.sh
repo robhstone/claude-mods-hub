@@ -9,6 +9,8 @@
 #
 #   install-skills.sh plugin <owner/repo> <commit> <marketplace> <plugin>
 #     Keeps the repository in a folder and installs its plugin from there.
+#
+# The hub turns these exit codes into advice: 3, no Claude Code command line; 4, the download failed.
 
 set -eu
 
@@ -19,8 +21,8 @@ trap 'rm -rf "$work"' EXIT
 
 download() {
   mkdir -p "$work/repo"
-  curl -fsSL --retry 2 --max-time 180 "https://codeload.github.com/$1/tar.gz/$2" -o "$work/repo.tar.gz"
-  tar -xzf "$work/repo.tar.gz" -C "$work/repo" --strip-components=1
+  curl -fsSL --retry 2 --max-time 180 "https://codeload.github.com/$1/tar.gz/$2" -o "$work/repo.tar.gz" || exit 4
+  tar -xzf "$work/repo.tar.gz" -C "$work/repo" --strip-components=1 || exit 4
 }
 
 # The desktop app keeps its own copy of the command line, which may not be on the PATH.
@@ -45,7 +47,7 @@ find_claude() {
     return 0
   fi
   echo "Couldn't find Claude Code's command line" >&2
-  return 1
+  return 3
 }
 
 is_on_demand() {

@@ -357,6 +357,45 @@ test('a failed author is named, the rest still install, and the button stays to 
   await ui.unmount()
 })
 
+test('each kind of failure gets its own advice, and only a failed download mentions the connection', async ($, on) => {
+  const toasts: string[] = []
+  engine(on, toasts, [])
+  promptBox(on)
+  const outcomes = new Map<string, number | 'cannot start'>([
+    ['mattpocock/skills', 3],
+    ['t3dotgg/tstack', 4],
+    ['michael-denyer/pstack-claude', 'cannot start'],
+  ])
+  on('process.run', (_, e) => {
+    const outcome = [...outcomes].find(([repo]) => e.argv.includes(repo))![1]
+    if (outcome === 'cannot start') throw new Error('sh not found')
+    return { value: { exitCode: outcome, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } } as never
+  })
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'hub-tab-skills' })
+
+  await ui.press({ key: 'skills-install' })
+  expect(toasts.at(-1)).toMatch(/Matt and Theo and Poteto's skills/)
+  expect(toasts.at(-1)).toMatch(/command line/)
+  expect(toasts.at(-1)).toMatch(/check your connection/)
+  expect(toasts.at(-1)).toMatch(/couldn't start or ran out of time/)
+
+  outcomes.set('t3dotgg/tstack', 3)
+  outcomes.set('michael-denyer/pstack-claude', 3)
+  await ui.press({ key: 'skills-install' })
+  expect(toasts.at(-1)).toMatch(/command line/)
+  expect(toasts.at(-1)).not.toMatch(/connection/)
+
+  outcomes.set('mattpocock/skills', 1)
+  outcomes.set('t3dotgg/tstack', 1)
+  outcomes.set('michael-denyer/pstack-claude', 1)
+  await ui.press({ key: 'skills-install' })
+  expect(toasts.at(-1)).toMatch(/under Thanks in the README/)
+  expect(toasts.at(-1)).not.toMatch(/connection/)
+  await ui.unmount()
+})
+
 test('installed, but not showing yet, says to start a new session rather than offer it again', async ($, on) => {
   const toasts: string[] = []
   engine(on, toasts, [])

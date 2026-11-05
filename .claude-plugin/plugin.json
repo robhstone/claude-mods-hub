@@ -1,6 +1,6 @@
 {
   "name": "mods-hub",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "A home base above the prompt for all your mods: favorite tabs, a ⋯ menu for the rest, and a settings view to turn mods on and off. Ships Cache (keep the prompt cache warm, guard cold sends), Progress (plan and sub-agent tracker) and Skills (a launcher and guide for your favorite skills).",
   "author": { "name": "Rob Stone" },
   "license": "MIT",

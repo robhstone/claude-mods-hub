@@ -112,6 +112,15 @@ export function installArgs(id: AuthorId, missing: Skill[]): { argv: string[]; o
 const missingHint = (skill: Skill): string =>
   skill.extra ? `Not part of the recommended set. ${AUTHORS[skill.author].install}` : 'Press Install Recommended Skills.'
 
+/** What to do about a failed install, from the install script's exit code. */
+export function installAdvice(exitCode: number): string {
+  if (exitCode === 3) return 'They need Claude Code\'s command line: install it, then try again.'
+  if (exitCode === 4) return 'The download failed: check your connection and try again.'
+  return 'Try again, or follow the author\'s own steps under Thanks in the README.'
+}
+// The engine rejects both when the script can't start and when it times out, and doesn't say which.
+const CANNOT_FINISH = 'The installer couldn\'t start or ran out of time, so try again. On Windows, follow the author\'s own steps under Thanks in the README.'
+
 /** Council reads its members from what you ask, so they travel in the prompt. */
 export function councilArgs(chosen: string[]): string {
   const providers = new Set(COUNCIL_OPTIONS.filter(o => chosen.includes(o.name)).map(o => o.provider))
@@ -125,6 +134,7 @@ async function installRecommended($: $) {
   if ((await read($, installState)).phase === 'running') return
   const missing = missingRecommended(await $.command.list())
   const failed: string[] = []
+  const advice = new Set<string>()
   let addedPlugin = false
   for (const id of INSTALL_ORDER) {
     if (!missing.some(skill => skill.author === id)) continue
@@ -136,10 +146,13 @@ async function installRecommended($: $) {
         timeoutMs: INSTALL_TIMEOUT,
         env: { ON_DEMAND: onDemand },
       })
-      if (result.exitCode !== 0) failed.push(author.name)
-      else if (author.plugin) addedPlugin = true
+      if (result.exitCode !== 0) {
+        failed.push(author.name)
+        advice.add(installAdvice(result.exitCode))
+      } else if (author.plugin) addedPlugin = true
     } catch {
       failed.push(author.name)
+      advice.add(CANNOT_FINISH)
     }
   }
   // A new plugin needs a reload to show. Skills in the folder turn up by themselves.
@@ -151,7 +164,7 @@ async function installRecommended($: $) {
     }
   }
   if (failed.length > 0) {
-    const note = `Couldn't install ${failed.join(' and ')}'s skills. Check your connection and try again.`
+    const note = `Couldn't install ${failed.join(' and ')}'s skills. ${[...advice].join(' ')}`
     await update($, installState, () => ({ phase: 'failed', note } as InstallState))
     $.ui.toast(note)
   } else {
